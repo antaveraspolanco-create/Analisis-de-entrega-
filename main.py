@@ -92,7 +92,7 @@ try:
     )
 
     # -------------------------------------------------------------
-    # TAB 1: Evolución Temporal
+    # TAB 1: Evolución Temporal (Gráfico de Líneas + Promedio Exacto)
     # -------------------------------------------------------------
     with tab1:
         st.subheader("Trayectoria IPC General vs. IPC Salud")
@@ -114,28 +114,30 @@ try:
 
             if frecuencia == "Promedio Anual":
                 df_plot["Año"] = df_plot["Fecha"].dt.year
-                df_plot = df_plot.groupby("Año")[cols_grafico].mean().reset_index()
+                df_plot = df_plot.groupby("Año")[cols_grafico].mean(numeric_only=True).reset_index()
                 eje_x = "Año"
             else:
                 eje_x = "Fecha"
 
-            fig_barras = px.bar(
+            # Gráfico de Líneas
+            fig_lineas = px.line(
                 df_plot,
                 x=eje_x,
                 y=cols_grafico,
-                barmode="group",
-                title="Comparativo IPC General vs IPC Salud",
-                color_discrete_sequence=["#2b5c8f", "#00a8e8"],
+                title="Evolución Histórica del IPC General vs IPC Salud",
+                markers=True,
+                color_discrete_map={"IPC general": "#2b5c8f", "Salud": "#00a8e8"},
             )
 
-            fig_barras.update_layout(
+            fig_lineas.update_layout(
                 xaxis_title="Periodo",
                 yaxis_title="Índice Base",
                 legend_title="Indicadores",
                 hovermode="x unified",
+                height=500,
             )
 
-            st.plotly_chart(fig_barras, use_container_width=True)
+            st.plotly_chart(fig_lineas, use_container_width=True)
         else:
             st.error(
                 "⚠️ Columnas requeridas ('Fecha', 'IPC general', 'Salud') no encontradas."

@@ -1,0 +1,71 @@
+Codigo_COICOP,Nivel,Descripcion
+06,División,Salud
+06.1,Grupo,"Productos, aparatos y equipos médicos"
+06.1.1,Clase,Productos farmacéuticos
+06.1.1.1,Subclase,Medicamentos recetados
+06.1.1.1.01,Artículo,"Antibióticos (ej. Amoxicilina, Azitromicina)"
+06.1.1.1.02,Artículo,"Antihipertensivos (ej. Losartán, Enalapril)"
+06.1.1.1.03,Artículo,"Antidiabéticos (ej. Metformina, Insulina)"
+06.1.1.1.04,Artículo,"Analgésicos y antiinflamatorios fuertes (ej. Diclofenaco, Tramadol)"
+06.1.1.2,Subclase,Medicamentos de venta libre (OTC)
+06.1.1.2.01,Artículo,Analgésicos generales (ej. Acetaminofén / Paracetamol)
+06.1.1.2.02,Artículo,Antigripales y jarabes para la tos
+06.1.1.2.03,Artículo,Antialérgicos / Antihistamínicos (ej. Loratadina)
+06.1.1.2.04,Artículo,Suplementos vitamínicos y minerales
+06.1.2,Clase,Otros productos médicos
+06.1.2.1,Subclase,Materiales de curación y productos de un solo uso
+06.1.2.1.01,Artículo,"Algodón, gasas, vendas y esparadrapo"
+06.1.2.1.02,Artículo,Jeringas y agujas descartables
+06.1.2.1.03,Artículo,Alcohol antiséptico y agua oxigenada
+06.1.2.1.04,Artículo,"Pruebas de diagnóstico rápido (ej. Embarazo, Glucemia)"
+06.1.3,Clase,Aparatos y equipos terapéuticos
+06.1.3.1,Subclase,Equipos de corrección óptica y audición
+06.1.3.1.01,Artículo,Lentes graduados / Cristales
+06.1.3.1.02,Artículo,Monturas para espejuelos
+06.1.3.1.03,Artículo,Lentes de contacto
+06.1.3.1.04,Artículo,Aparatos auditivos (audífonos para sordera)
+06.1.3.2,Subclase,Dispositivos ortopédicos y de asistencia motriz
+06.1.3.2.01,Artículo,Sillas de ruedas (manuales o eléctricas)
+06.1.3.2.02,Artículo,"Muletas, bastones y andadores"
+06.1.3.2.03,Artículo,Prótesis médicas y calzado ortopédico
+06.1.3.2.04,Artículo,Tomadores de presión / Tensiómetros caseros
+06.2,Grupo,Servicios ambulatorios
+06.2.1,Clase,Servicios médicos generales y especializados
+06.2.1.1,Subclase,Consultas de medicina general
+06.2.1.1.01,Artículo,Consulta de médico general (Clínica privada)
+06.2.1.1.02,Artículo,Consulta de médico general (Centro médico / Policlínica)
+06.2.1.2,Subclase,Consultas médicas especializadas
+06.2.1.2.01,Artículo,Consulta de Pediatría
+06.2.1.2.02,Artículo,Consulta de Ginecología y Obstetricia
+06.2.1.2.03,Artículo,Consulta de Cardiología
+06.2.1.2.04,Artículo,Consulta de Dermatología
+06.2.1.2.05,Artículo,"Otras consultas de especialidad (Gastroenterología, Oftalmología, etc.)"
+06.2.2,Clase,Servicios odontológicos
+06.2.2.1,Subclase,Tratamientos y procedimientos dentales comunes
+06.2.2.1.01,Artículo,Consulta de diagnóstico y limpieza dental (Profilaxis)
+06.2.2.1.02,Artículo,Empastaduras / Resinas / Calzaduras dentales
+06.2.2.1.03,Artículo,Extracción dental simple
+06.2.2.1.04,Artículo,Tratamiento de canal (Endodoncia)
+06.2.2.1.05,Artículo,Ortodoncia (mantenimiento mensual de brackets)
+06.2.3,Clase,Servicios paramédicos y de diagnóstico
+06.2.3.1,Subclase,Servicios de laboratorios clínicos
+06.2.3.1.01,Artículo,"Análisis de sangre básicos (Hemograma, Perfil lipídico, Glicemia)"
+06.2.3.1.02,Artículo,Análisis de orina y coprológico (heces)
+06.2.3.2,Subclase,Servicios de imágenes diagnósticas
+06.2.3.2.01,Artículo,Radiografías (Rayos X) dentales o de extremidades
+06.2.3.2.02,Artículo,Sonografía / Ecografía abdominal o pélvica
+06.2.3.2.03,Artículo,Resonancia Magnética (RMN) o Tomografía Axial Computarizada (TAC)
+06.2.3.3,Subclase,Servicios terapéuticos y otros servicios auxiliares
+06.2.3.3.01,Artículo,Sesión de terapia física y rehabilitación motora
+06.2.3.3.02,Artículo,Servicios de enfermería a domicilio
+06.2.3.3.03,Artículo,Servicio de traslado en ambulancia (emergencia urbana)
+06.3,Grupo,Servicios de hospitalización
+06.3.1,Clase,Servicios de hospitales y clínicas
+06.3.1.1,Subclase,Servicios de internamiento e infraestructura hospitalaria
+06.3.1.1.01,Artículo,Costo por día de habitación / Cama en clínica privada (Internamiento estándar)
+06.3.1.1.02,Artículo,Costo por día en Unidad de Cuidados Intensivos (UCI)
+06.3.1.1.03,Artículo,Derecho de uso de sala de cirugía / Quirófano
+06.3.1.2,Subclase,Servicios médicos y de enfermería en régimen de hospitalización
+06.3.1.2.01,Artículo,Honorarios médicos por seguimiento en internamiento
+06.3.1.2.02,Artículo,Paquete de gastos clínicos por atención de parto o cesárea
+06.3.1.2.03,Artículo,Servicio de anestesiología en intervenciones quirúrgicas

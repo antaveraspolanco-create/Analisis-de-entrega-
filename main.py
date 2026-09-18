@@ -284,36 +284,26 @@ try:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
-    # -------------------------------------------------------------
-    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD (CORREGIDO)
+# -------------------------------------------------------------
+    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD (CORREGIDO DE RAÍZ)
     # -------------------------------------------------------------
     with tab5:
         st.header("📊 Evolución Lineal - IPC República Dominicana Salud")
 
         df_salud_clean = df_salud.copy()
 
-        # Limpiar comillas y caracteres raros en los nombres de columnas
-        df_salud_clean.columns = (
-            df_salud_clean.columns.astype(str)
-            .str.replace('"', '')
-            .str.replace('', 'o')
-            .str.strip()
-        )
+        # 1. Limpieza básica de nombres de columnas
+        df_salud_clean.columns = [str(col).strip().replace('"', '') for col in df_salud_clean.columns]
 
-        # Convertir todas las columnas excepto fechas/categorías a formato numérico
+        # 2. Convertir columnas numéricas de forma segura
         for col in df_salud_clean.columns:
-            if "Fecha" not in col and "Categoria" not in col and "Rubro" not in col:
-                df_salud_clean[col] = (
-                    df_salud_clean[col]
-                    .astype(str)
-                    .str.replace(',', '.')
-                    .str.replace('None', '')
-                    .str.strip()
-                )
-                df_salud_clean[col] = pd.to_numeric(df_salud_clean[col], errors='coerce')
+            if not any(keyword in col.lower() for keyword in ["fecha", "categoria", "rubro", "articulo"]):
+                # Reemplazar comas por puntos y convertir a número
+                s_num = df_salud_clean[col].astype(str).str.replace(',', '.').str.strip()
+                df_salud_clean[col] = pd.to_numeric(s_num, errors='coerce')
 
-        # Parsear fecha en caso de existir
-        col_fecha = [c for c in df_salud_clean.columns if "Fecha" in c]
+        # 3. Detectar columna de fecha si existe
+        col_fecha = [c for c in df_salud_clean.columns if "fecha" in c.lower()]
         if col_fecha:
             df_salud_clean[col_fecha[0]] = pd.to_datetime(
                 df_salud_clean[col_fecha[0]].astype(str).str.split().str[0], 

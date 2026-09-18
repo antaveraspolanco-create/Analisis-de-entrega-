@@ -93,7 +93,7 @@ try:
     )
 
     # -------------------------------------------------------------
-    # TAB 1: Evolución Temporal
+    # TAB 1: Evolución Temporal con Filtro por Año
     # -------------------------------------------------------------
     with tab1:
         st.subheader("Trayectoria IPC General vs. IPC Salud")
@@ -105,13 +105,28 @@ try:
         ]
 
         if "Fecha" in df_serie.columns and cols_grafico:
-            frecuencia = st.radio(
-                "Frecuencia de visualización:",
-                options=["Mensual (Todos los datos)", "Promedio Anual"],
-                horizontal=True,
-            )
+            df_plot = df_serie.copy().dropna(subset=["Fecha"]).sort_values("Fecha")
+            df_plot["Año"] = df_plot["Fecha"].dt.year
+            df_plot["Mes_Nombre"] = df_plot["Fecha"].dt.strftime("%b %Y")  # Eje claro Ej: Jan 2024
 
-            df_plot = df_serie.copy().sort_values("Fecha")
+            col_f1, col_f2 = st.columns([1, 2])
+            
+            with col_f1:
+                frecuencia = st.radio(
+                    "Frecuencia de visualización:",
+                    options=["Mensual (Todos los datos)", "Promedio Anual"],
+                    horizontal=False,
+                )
+
+            with col_f2:
+                # Selector de Año
+                anios_disponibles = sorted(df_plot["Año"].unique(), reverse=True)
+                opciones_anios = ["Todos los Años"] + [str(a) for a in anios_disponibles]
+                anio_seleccionado = st.selectbox("Filtrar por Año:", opciones_anios)
+
+            # Filtrar DataFrame según el año seleccionado
+            if anio_seleccionado != "Todos los Años":
+                df_plot = df_plot[df_plot["Año"] == int(anio_seleccionado)]
 
             if frecuencia == "Mensual (Todos los datos)":
                 fig = go.Figure()
@@ -119,7 +134,7 @@ try:
                 if "IPC general" in cols_grafico:
                     fig.add_trace(
                         go.Bar(
-                            x=df_plot["Fecha"],
+                            x=df_plot["Mes_Nombre"],
                             y=df_plot["IPC general"],
                             name="IPC General (Barras)",
                             marker_color="#2b5c8f",
@@ -129,35 +144,37 @@ try:
                 if "Salud" in cols_grafico:
                     fig.add_trace(
                         go.Bar(
-                            x=df_plot["Fecha"],
+                            x=df_plot["Mes_Nombre"],
                             y=df_plot["Salud"],
                             name="IPC Salud (Barras)",
                             marker_color="#00a8e8",
                         )
                     )
 
+                # Línea Promedio Ascendente
                 df_plot["Promedio_IPC"] = df_plot[cols_grafico].mean(axis=1)
                 fig.add_trace(
                     go.Scatter(
-                        x=df_plot["Fecha"],
+                        x=df_plot["Mes_Nombre"],
                         y=df_plot["Promedio_IPC"],
                         mode="lines+markers",
                         name="Línea de Promedio Ascendente",
-                        line=dict(color="#ff9f1c", width=3, dash="solid"),
+                        line=dict(color="#ff9f1c", width=3),
                     )
                 )
 
                 fig.update_layout(
                     barmode="group",
-                    title="Evolución Mensual: Barras IPC General vs Salud con Línea de Promedio",
-                    xaxis_title="Fecha",
+                    title=f"Evolución Mensual (Enero a Diciembre): IPC General vs Salud - {anio_seleccionado}",
+                    xaxis_title="Mes / Periodo",
                     yaxis_title="Índice Base",
+                    xaxis=dict(type='category', tickangle=-45),
                     hovermode="x unified",
                     height=550,
                 )
 
             else:
-                df_plot["Año"] = df_plot["Fecha"].dt.year
+                # Promedio Anual
                 df_anual = df_plot.groupby("Año")[cols_grafico].mean(numeric_only=True).reset_index()
 
                 fig = px.bar(
@@ -165,13 +182,14 @@ try:
                     x="Año",
                     y=cols_grafico,
                     barmode="group",
-                    title="Promedio Anual: Comparativo de Barras IPC General vs IPC Salud",
+                    title="Promedio Anual: Comparativo IPC General vs IPC Salud",
                     color_discrete_sequence=["#2b5c8f", "#00a8e8"],
                 )
 
                 fig.update_layout(
                     xaxis_title="Año",
                     yaxis_title="Promedio Índice Base",
+                    xaxis=dict(type='category'),
                     hovermode="x unified",
                     height=500,
                 )
@@ -258,7 +276,7 @@ try:
         )
 
         capita_nueva = capita_actual * (1 + (var_input / 100))
-        st.info(f"Variación applied: **{var_input:.2f}%**")
+        st.info(f"Variación aplicada: **{var_input:.2f}%**")
         st.success(
             f"**Per Cápita Reajustado Recomendado:** RD$ {capita_nueva:,.2f} / afiliado / mes"
         )
@@ -285,7 +303,7 @@ try:
         )
 
     # -------------------------------------------------------------
-    # TAB 5: GRÁFICO TIPO LINEAL DE IPC SALUD
+    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD
     # -------------------------------------------------------------
     with tab5:
         st.header("📊 Evolución Lineal - IPC República Dominicana Salud")
@@ -297,7 +315,6 @@ try:
             col_x = st.selectbox("Seleccionar Eje X (Fecha / Categoría):", options=cols_cat, key="sb_cat_salud")
             col_y = st.selectbox("Seleccionar Eje Y (Variación / Índice):", options=cols_num, key="sb_num_salud")
 
-            # Intentar ordenar cronológicamente si el eje X es una fecha
             df_salud_plot = df_salud.copy()
             try:
                 df_salud_plot["Fecha_dt"] = pd.to_datetime(df_salud_plot[col_x], errors="coerce")
@@ -306,7 +323,6 @@ try:
             except Exception:
                 pass
 
-            # Gráfico de Líneas Interactivo (px.line)
             fig_line_salud = px.line(
                 df_salud_plot,
                 x=col_x,

@@ -54,42 +54,45 @@ def _leer_csv(ruta: Path) -> pd.DataFrame:
 
 @st.cache_data
 def cargar_datos():
-    """Carga los datasets históricos de la serie temporal y la jerarquía."""
+    """Carga los datasets históricos de la serie temporal, jerarquía y salud."""
     ruta_serie = BASE_DIR / "IPC República Dominicana (ACDI).csv"
     ruta_jerarquia = BASE_DIR / "DataSet analisis.csv"
+    ruta_salud = BASE_DIR / "IPC República Dominicana Salud.csv"
 
-    if not ruta_serie.exists() or not ruta_jerarquia.exists():
-        return None, None
+    if not ruta_serie.exists() or not ruta_jerarquia.exists() or not ruta_salud.exists():
+        return None, None, None
 
     df_serie = _leer_csv(ruta_serie)
     df_jerarquia = _leer_csv(ruta_jerarquia)
+    df_salud = _leer_csv(ruta_salud)
 
     if "Fecha" in df_serie.columns:
         df_serie["Fecha"] = pd.to_datetime(df_serie["Fecha"], errors="coerce")
 
-    return df_serie, df_jerarquia
+    return df_serie, df_jerarquia, df_salud
 
 
 try:
-    df_serie, df_jerarquia = cargar_datos()
+    df_serie, df_jerarquia, df_salud = cargar_datos()
 
-    if df_serie is None or df_jerarquia is None:
+    if df_serie is None or df_jerarquia is None or df_salud is None:
         st.error(
             "⚠️ No se encontraron los archivos CSV requeridos en la carpeta del proyecto."
         )
         st.stop()
 
-    tab1, tab2, tab3, tab4 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
             "Evolución Macro (IPC vs Salud)",
             "Jerarquía COICOP Salud",
             "Implicaciones PDSS",
             "Tabla IPC Completa",
+            "IPC República Dominicana Salud",
         ]
     )
 
-# -------------------------------------------------------------
-    # TAB 1: Evolución Temporal (Gráfico de Barras)
+    # -------------------------------------------------------------
+    # TAB 1: Evolución Temporal
     # -------------------------------------------------------------
     with tab1:
         st.subheader("Trayectoria IPC General vs. IPC Salud")
@@ -101,7 +104,6 @@ try:
         ]
 
         if "Fecha" in df_serie.columns and cols_grafico:
-            # Opción para agrupar por frecuencia si la serie tiene muchos datos
             frecuencia = st.radio(
                 "Frecuencia de visualización:",
                 options=["Mensual (Todos los datos)", "Promedio Anual"],
@@ -117,7 +119,6 @@ try:
             else:
                 eje_x = "Fecha"
 
-            # Crear gráfico de barras agrupadas
             fig_barras = px.bar(
                 df_plot,
                 x=eje_x,
@@ -141,16 +142,14 @@ try:
             )
 
     # -------------------------------------------------------------
-    # TAB 2: Jerarquía COICOP (Pie + Treemap / Sunburst)
+    # TAB 2: Jerarquía COICOP
     # -------------------------------------------------------------
     with tab2:
         st.subheader("Ponderación del Rubro Salud en la Canasta")
 
-        # Definir la lista de niveles jerárquicos COICOP según tu CSV
         path_jerarquia = ["Division", "Grupo", "Clase", "Subclase", "Artículo"]
         path_validos = [col for col in path_jerarquia if col in df_jerarquia.columns]
 
-        # Si no coinciden los nombres exactos de columnas, intenta con nombres comunes en tu dataset
         if not path_validos:
             path_validos = [col for col in ["Nivel", "Codigo_COICOP", "Descripcion"] if col in df_jerarquia.columns]
 
@@ -224,7 +223,7 @@ try:
         )
 
     # -------------------------------------------------------------
-    # TAB 4: Tabla IPC Completa y Exportación
+    # TAB 4: Tabla IPC Completa
     # -------------------------------------------------------------
     with tab4:
         st.subheader("Serie Temporal Histórica de Precios")
@@ -244,7 +243,41 @@ try:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
+    # -------------------------------------------------------------
+    # TAB 5: Datos e Histogramas/Barras de IPC Salud
+    # -------------------------------------------------------------
+    with tab5:
+        st.header("📊 Comparativo de Rubros e Inflación - IPC Salud")
+
+        cols_num = df_salud.select_dtypes(include=["number"]).columns.tolist()
+        cols_cat = df_salud.select_dtypes(include=["object", "category"]).columns.tolist()
+
+        if cols_cat and cols_num:
+            col_x = st.selectbox("Seleccionar Eje X (Categoría / Rubro):", options=cols_cat, key="sb_cat_salud")
+            col_y = st.selectbox("Seleccionar Eje Y (Variación / Índice):", options=cols_num, key="sb_num_salud")
+
+            fig_bar_salud = px.bar(
+                df_salud,
+                x=col_x,
+                y=col_y,
+                title=f"Comparativo de {col_y} por {col_x}",
+                color=col_y,
+                color_continuous_scale="Blues",
+                text_auto=".2f",
+            )
+            fig_bar_salud.update_layout(
+                xaxis_title=col_x,
+                yaxis_title=col_y,
+                xaxis_tickangle=-45,
+                height=500,
+            )
+            st.plotly_chart(fig_bar_salud, use_container_width=True)
+        else:
+            st.info("💡 Mostrando tabla de datos completa.")
+
+        st.subheader("Vista previa de la tabla de datos")
+        st.dataframe(df_salud, use_container_width=True)
+        st.caption(f"Total de registros cargados: {len(df_salud)} filas.")
+
 except Exception as e:
     st.error(f"Error al ejecutar el dashboard: {e}")
-
-    streamlit

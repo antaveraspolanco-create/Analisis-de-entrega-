@@ -285,30 +285,51 @@ try:
         )
 
     # -------------------------------------------------------------
-    # TAB 5: GRÁFICO TIPO LINEAL DE IPC SALUD
+    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD (CORREGIDO)
     # -------------------------------------------------------------
     with tab5:
         st.header("📊 Evolución Lineal - IPC República Dominicana Salud")
 
-        cols_num = df_salud.select_dtypes(include=["number"]).columns.tolist()
-        cols_cat = df_salud.select_dtypes(include=["object", "category"]).columns.tolist()
+        df_salud_clean = df_salud.copy()
+
+        # Limpiar comillas y caracteres raros en los nombres de columnas
+        df_salud_clean.columns = (
+            df_salud_clean.columns.astype(str)
+            .str.replace('"', '')
+            .str.replace('', 'o')
+            .str.strip()
+        )
+
+        # Convertir todas las columnas excepto fechas/categorías a formato numérico
+        for col in df_salud_clean.columns:
+            if "Fecha" not in col and "Categoria" not in col and "Rubro" not in col:
+                df_salud_clean[col] = (
+                    df_salud_clean[col]
+                    .astype(str)
+                    .str.replace(',', '.')
+                    .str.replace('None', '')
+                    .str.strip()
+                )
+                df_salud_clean[col] = pd.to_numeric(df_salud_clean[col], errors='coerce')
+
+        # Parsear fecha en caso de existir
+        col_fecha = [c for c in df_salud_clean.columns if "Fecha" in c]
+        if col_fecha:
+            df_salud_clean[col_fecha[0]] = pd.to_datetime(
+                df_salud_clean[col_fecha[0]].astype(str).str.split().str[0], 
+                errors='coerce'
+            )
+            df_salud_clean = df_salud_clean.dropna(subset=[col_fecha[0]]).sort_values(col_fecha[0])
+
+        cols_num = df_salud_clean.select_dtypes(include=["number"]).columns.tolist()
+        cols_cat = df_salud_clean.columns.difference(cols_num).tolist()
 
         if cols_cat and cols_num:
             col_x = st.selectbox("Seleccionar Eje X (Fecha / Categoría):", options=cols_cat, key="sb_cat_salud")
             col_y = st.selectbox("Seleccionar Eje Y (Variación / Índice):", options=cols_num, key="sb_num_salud")
 
-            # Intentar ordenar cronológicamente si el eje X es una fecha
-            df_salud_plot = df_salud.copy()
-            try:
-                df_salud_plot["Fecha_dt"] = pd.to_datetime(df_salud_plot[col_x], errors="coerce")
-                if not df_salud_plot["Fecha_dt"].isna().all():
-                    df_salud_plot = df_salud_plot.sort_values("Fecha_dt")
-            except Exception:
-                pass
-
-            # Gráfico de Líneas Interactivo (px.line)
             fig_line_salud = px.line(
-                df_salud_plot,
+                df_salud_clean,
                 x=col_x,
                 y=col_y,
                 title=f"Evolución Lineal de {col_y} según {col_x}",
@@ -324,11 +345,16 @@ try:
             )
             st.plotly_chart(fig_line_salud, use_container_width=True)
         else:
-            st.info("💡 Mostrando tabla de datos completa.")
+            st.warning("⚠️ No se detectaron columnas numéricas válidas para graficar en este archivo.")
 
         st.subheader("Vista previa de la tabla de datos")
-        st.dataframe(df_salud, use_container_width=True)
-        st.caption(f"Total de registros cargados: {len(df_salud)} filas.")
+        st.dataframe(df_salud_clean, use_container_width=True)
+        st.caption(f"Total de registros cargados: {len(df_salud_clean)} filas.")
+        # Cierre de la Tab 5 (debe llevar sangría/espacios dentro del try)
+        st.subheader("Vista previa de la tabla de datos")
+        st.dataframe(df_salud_clean, use_container_width=True)
+        st.caption(f"Total de registros cargados: {len(df_salud_clean)} filas.")
 
+# El bloque except debe ir al nivel principal (sin sangría al inicio de la línea)
 except Exception as e:
     st.error(f"Error al ejecutar el dashboard: {e}")

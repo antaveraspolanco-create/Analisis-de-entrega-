@@ -111,7 +111,7 @@ try:
                 horizontal=True,
             )
 
-            df_plot = df_serie.copy().sort_values("Fecha")
+            df_plot = df_serie.copy().dropna(subset=["Fecha"]).sort_values("Fecha")
 
             if frecuencia == "Mensual (Todos los datos)":
                 fig = go.Figure()
@@ -147,6 +147,7 @@ try:
                     )
                 )
 
+                # Configuración de escala de fechas con paso mensual al acercar
                 fig.update_layout(
                     barmode="group",
                     title="Evolución Mensual: Barras IPC General vs Salud con Línea de Promedio",
@@ -154,9 +155,16 @@ try:
                     yaxis_title="Índice Base",
                     hovermode="x unified",
                     height=550,
+                    xaxis=dict(
+                        type="date",
+                        dtick="M1",            # Cada tick representa exactamente 1 mes
+                        tickformat="%b %Y",     # Muestra Ene 2021, Feb 2021, etc.
+                        tickangle=-45
+                    )
                 )
 
             else:
+                # Promedio Anual intacto (Barras por año)
                 df_plot["Año"] = df_plot["Fecha"].dt.year
                 df_anual = df_plot.groupby("Año")[cols_grafico].mean(numeric_only=True).reset_index()
 
@@ -174,6 +182,7 @@ try:
                     yaxis_title="Promedio Índice Base",
                     hovermode="x unified",
                     height=500,
+                    xaxis=dict(type='category')
                 )
 
             st.plotly_chart(fig, use_container_width=True)
@@ -258,7 +267,7 @@ try:
         )
 
         capita_nueva = capita_actual * (1 + (var_input / 100))
-        st.info(f"Variación applied: **{var_input:.2f}%**")
+        st.info(f"Variación aplicada: **{var_input:.2f}%**")
         st.success(
             f"**Per Cápita Reajustado Recomendado:** RD$ {capita_nueva:,.2f} / afiliado / mes"
         )
@@ -285,7 +294,7 @@ try:
         )
 
     # -------------------------------------------------------------
-    # TAB 5: GRÁFICO TIPO LINEAL DE IPC SALUD
+    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD
     # -------------------------------------------------------------
     with tab5:
         st.header("📊 Evolución Lineal - IPC República Dominicana Salud")
@@ -297,7 +306,6 @@ try:
             col_x = st.selectbox("Seleccionar Eje X (Fecha / Categoría):", options=cols_cat, key="sb_cat_salud")
             col_y = st.selectbox("Seleccionar Eje Y (Variación / Índice):", options=cols_num, key="sb_num_salud")
 
-            # Intentar ordenar cronológicamente si el eje X es una fecha
             df_salud_plot = df_salud.copy()
             try:
                 df_salud_plot["Fecha_dt"] = pd.to_datetime(df_salud_plot[col_x], errors="coerce")
@@ -306,7 +314,6 @@ try:
             except Exception:
                 pass
 
-            # Gráfico de Líneas Interactivo (px.line)
             fig_line_salud = px.line(
                 df_salud_plot,
                 x=col_x,

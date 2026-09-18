@@ -116,7 +116,6 @@ try:
             if frecuencia == "Mensual (Todos los datos)":
                 fig = go.Figure()
 
-                # Barras para IPC General
                 if "IPC general" in cols_grafico:
                     fig.add_trace(
                         go.Bar(
@@ -127,7 +126,6 @@ try:
                         )
                     )
 
-                # Barras para IPC Salud
                 if "Salud" in cols_grafico:
                     fig.add_trace(
                         go.Bar(
@@ -138,7 +136,6 @@ try:
                         )
                     )
 
-                # Línea Promedio / Tendencia Ascendente Combinada
                 df_plot["Promedio_IPC"] = df_plot[cols_grafico].mean(axis=1)
                 fig.add_trace(
                     go.Scatter(
@@ -160,7 +157,6 @@ try:
                 )
 
             else:
-                # Promedio Anual (Solo Barras)
                 df_plot["Año"] = df_plot["Fecha"].dt.year
                 df_anual = df_plot.groupby("Año")[cols_grafico].mean(numeric_only=True).reset_index()
 
@@ -262,7 +258,7 @@ try:
         )
 
         capita_nueva = capita_actual * (1 + (var_input / 100))
-        st.info(f"Variación aplicada: **{var_input:.2f}%**")
+        st.info(f"Variación applied: **{var_input:.2f}%**")
         st.success(
             f"**Per Cápita Reajustado Recomendado:** RD$ {capita_nueva:,.2f} / afiliado / mes"
         )
@@ -289,32 +285,44 @@ try:
         )
 
     # -------------------------------------------------------------
-    # TAB 5: Datos e Histogramas/Barras de IPC Salud
+    # TAB 5: GRÁFICO TIPO LINEAL DE IPC SALUD
     # -------------------------------------------------------------
     with tab5:
-        st.header("📊 Comparativo de Rubros e Inflación - IPC Salud")
+        st.header("📊 Evolución Lineal - IPC República Dominicana Salud")
 
         cols_num = df_salud.select_dtypes(include=["number"]).columns.tolist()
         cols_cat = df_salud.select_dtypes(include=["object", "category"]).columns.tolist()
 
         if cols_cat and cols_num:
-            col_x = st.selectbox("Seleccionar Eje X (Categoría / Rubro):", options=cols_cat, key="sb_cat_salud")
+            col_x = st.selectbox("Seleccionar Eje X (Fecha / Categoría):", options=cols_cat, key="sb_cat_salud")
             col_y = st.selectbox("Seleccionar Eje Y (Variación / Índice):", options=cols_num, key="sb_num_salud")
 
-            fig_bar_salud = px.bar(
-                df_salud,
+            # Intentar ordenar cronológicamente si el eje X es una fecha
+            df_salud_plot = df_salud.copy()
+            try:
+                df_salud_plot["Fecha_dt"] = pd.to_datetime(df_salud_plot[col_x], errors="coerce")
+                if not df_salud_plot["Fecha_dt"].isna().all():
+                    df_salud_plot = df_salud_plot.sort_values("Fecha_dt")
+            except Exception:
+                pass
+
+            # Gráfico de Líneas Interactivo (px.line)
+            fig_line_salud = px.line(
+                df_salud_plot,
                 x=col_x,
                 y=col_y,
-                title=f"Gráfico de Barras: {col_y} por {col_x}",
+                title=f"Evolución Lineal de {col_y} según {col_x}",
+                markers=True,
                 color_discrete_sequence=["#00a8e8"],
             )
-            fig_bar_salud.update_layout(
+            fig_line_salud.update_layout(
                 xaxis_title=col_x,
                 yaxis_title=col_y,
-                xaxis=dict(type='category', tickangle=-45),
+                xaxis=dict(tickangle=-45),
+                hovermode="x unified",
                 height=550,
             )
-            st.plotly_chart(fig_bar_salud, use_container_width=True)
+            st.plotly_chart(fig_line_salud, use_container_width=True)
         else:
             st.info("💡 Mostrando tabla de datos completa.")
 

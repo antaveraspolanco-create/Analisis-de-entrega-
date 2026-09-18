@@ -2,6 +2,7 @@ from pathlib import Path
 import io
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 st.set_page_config(page_title="Dashboard IPC Salud & PDSS", layout="wide")
@@ -92,7 +93,7 @@ try:
     )
 
     # -------------------------------------------------------------
-    # TAB 1: Evolución Temporal (Gráfico de Líneas + Promedio Exacto)
+    # TAB 1: Evolución Temporal
     # -------------------------------------------------------------
     with tab1:
         st.subheader("Trayectoria IPC General vs. IPC Salud")
@@ -110,34 +111,76 @@ try:
                 horizontal=True,
             )
 
-            df_plot = df_serie.copy()
+            df_plot = df_serie.copy().sort_values("Fecha")
 
-            if frecuencia == "Promedio Anual":
-                df_plot["Año"] = df_plot["Fecha"].dt.year
-                df_plot = df_plot.groupby("Año")[cols_grafico].mean(numeric_only=True).reset_index()
-                eje_x = "Año"
+            if frecuencia == "Mensual (Todos los datos)":
+                fig = go.Figure()
+
+                # Barras para IPC General
+                if "IPC general" in cols_grafico:
+                    fig.add_trace(
+                        go.Bar(
+                            x=df_plot["Fecha"],
+                            y=df_plot["IPC general"],
+                            name="IPC General (Barras)",
+                            marker_color="#2b5c8f",
+                        )
+                    )
+
+                # Barras para IPC Salud
+                if "Salud" in cols_grafico:
+                    fig.add_trace(
+                        go.Bar(
+                            x=df_plot["Fecha"],
+                            y=df_plot["Salud"],
+                            name="IPC Salud (Barras)",
+                            marker_color="#00a8e8",
+                        )
+                    )
+
+                # Línea Promedio / Tendencia Ascendente Combinada
+                df_plot["Promedio_IPC"] = df_plot[cols_grafico].mean(axis=1)
+                fig.add_trace(
+                    go.Scatter(
+                        x=df_plot["Fecha"],
+                        y=df_plot["Promedio_IPC"],
+                        mode="lines+markers",
+                        name="Línea de Promedio Ascendente",
+                        line=dict(color="#ff9f1c", width=3, dash="solid"),
+                    )
+                )
+
+                fig.update_layout(
+                    barmode="group",
+                    title="Evolución Mensual: Barras IPC General vs Salud con Línea de Promedio",
+                    xaxis_title="Fecha",
+                    yaxis_title="Índice Base",
+                    hovermode="x unified",
+                    height=550,
+                )
+
             else:
-                eje_x = "Fecha"
+                # Promedio Anual (Solo Barras)
+                df_plot["Año"] = df_plot["Fecha"].dt.year
+                df_anual = df_plot.groupby("Año")[cols_grafico].mean(numeric_only=True).reset_index()
 
-            # Gráfico de Líneas
-            fig_lineas = px.line(
-                df_plot,
-                x=eje_x,
-                y=cols_grafico,
-                title="Evolución Histórica del IPC General vs IPC Salud",
-                markers=True,
-                color_discrete_map={"IPC general": "#2b5c8f", "Salud": "#00a8e8"},
-            )
+                fig = px.bar(
+                    df_anual,
+                    x="Año",
+                    y=cols_grafico,
+                    barmode="group",
+                    title="Promedio Anual: Comparativo de Barras IPC General vs IPC Salud",
+                    color_discrete_sequence=["#2b5c8f", "#00a8e8"],
+                )
 
-            fig_lineas.update_layout(
-                xaxis_title="Periodo",
-                yaxis_title="Índice Base",
-                legend_title="Indicadores",
-                hovermode="x unified",
-                height=500,
-            )
+                fig.update_layout(
+                    xaxis_title="Año",
+                    yaxis_title="Promedio Índice Base",
+                    hovermode="x unified",
+                    height=500,
+                )
 
-            st.plotly_chart(fig_lineas, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.error(
                 "⚠️ Columnas requeridas ('Fecha', 'IPC general', 'Salud') no encontradas."
@@ -262,16 +305,14 @@ try:
                 df_salud,
                 x=col_x,
                 y=col_y,
-                title=f"Comparativo de {col_y} por {col_x}",
-                color=col_y,
-                color_continuous_scale="Blues",
-                text_auto=".2f",
+                title=f"Gráfico de Barras: {col_y} por {col_x}",
+                color_discrete_sequence=["#00a8e8"],
             )
             fig_bar_salud.update_layout(
                 xaxis_title=col_x,
                 yaxis_title=col_y,
-                xaxis_tickangle=-45,
-                height=500,
+                xaxis=dict(type='category', tickangle=-45),
+                height=550,
             )
             st.plotly_chart(fig_bar_salud, use_container_width=True)
         else:

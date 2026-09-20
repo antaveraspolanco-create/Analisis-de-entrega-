@@ -55,28 +55,26 @@ def _leer_csv(ruta: Path) -> pd.DataFrame:
 
 @st.cache_data
 def cargar_datos():
-    """Carga los datasets históricos de la serie temporal, jerarquía y salud."""
+    """Carga los datasets históricos de la serie temporal y jerarquía."""
     ruta_serie = BASE_DIR / "IPC República Dominicana (ACDI).csv"
     ruta_jerarquia = BASE_DIR / "DataSet analisis.csv"
-    ruta_salud = BASE_DIR / "IPC República Dominicana Salud.csv"
 
-    if not ruta_serie.exists() or not ruta_jerarquia.exists() or not ruta_salud.exists():
-        return None, None, None
+    if not ruta_serie.exists() or not ruta_jerarquia.exists():
+        return None, None
 
     df_serie = _leer_csv(ruta_serie)
     df_jerarquia = _leer_csv(ruta_jerarquia)
-    df_salud = _leer_csv(ruta_salud)
 
     if "Fecha" in df_serie.columns:
         df_serie["Fecha"] = pd.to_datetime(df_serie["Fecha"], errors="coerce")
 
-    return df_serie, df_jerarquia, df_salud
+    return df_serie, df_jerarquia
 
 
 try:
-    df_serie, df_jerarquia, df_salud = cargar_datos()
+    df_serie, df_jerarquia = cargar_datos()
 
-    if df_serie is None or df_jerarquia is None or df_salud is None:
+    if df_serie is None or df_jerarquia is None:
         st.error(
             "⚠️ No se encontraron los archivos CSV requeridos en la carpeta del proyecto."
         )
@@ -284,85 +282,78 @@ try:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
-# -------------------------------------------------------------
-    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD (SOLUCIÓN DE RAÍZ)
+    # -------------------------------------------------------------
+    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD
     # -------------------------------------------------------------
     with tab5:
         st.header("📊 Evolución Lineal - IPC República Dominicana Salud")
 
-        df_salud_clean = df_salud.copy()
+        archivo_salud = BASE_DIR / "ipc_salud.csv"
 
-        # 1. Normalizar nombres de columnas (eliminar acentos/caracteres corruptos)
-        df_salud_clean.columns = (
-            df_salud_clean.columns.astype(str)
-            .str.encode('ascii', 'ignore')
-            .str.decode('utf-8')
-            .str.strip()
-        )
+        if archivo_salud.exists():
+            try:
+                df_salud_raw = pd.read_csv(archivo_salud, encoding='utf-8')
+            except Exception:
+                df_salud_raw = pd.read_csv(archivo_salud, encoding='latin1')
 
-        # 2. Identificar la columna de Fecha y convertirla correctamente
-        col_fecha = [c for c in df_salud_clean.columns if "fecha" in c.lower() or "fechas" in c.lower()]
-        
-        if col_fecha:
-            df_salud_clean[col_fecha[0]] = pd.to_datetime(df_salud_clean[col_fecha[0]], errors="coerce")
-            # Filtrar fechas vacías y ordenar cronológicamente
-            df_salud_clean = df_salud_clean.dropna(subset=[col_fecha[0]]).sort_values(col_fecha[0])
+            df_salud_clean = df_salud_raw.copy()
+            df_salud_clean.columns = (
+                df_salud_clean.columns.astype(str)
+                .str.replace('"', '')
+                .str.strip()
+            )
 
-        # 3. Limpiar y convertir todas las columnas numéricas
-        for col in df_salud_clean.columns:
-            if col not in col_fecha:
-                s_limpia = (
-                    df_salud_clean[col]
-                    .astype(str)
-                    .str.replace(',', '.')
-                    .str.replace('None', '')
-                    .str.replace('nan', '')
-                    .str.strip()
-                )
-                df_salud_clean[col] = pd.to_numeric(s_limpia, errors='coerce')
+            col_fecha = [c for c in df_salud_clean.columns if "fecha" in c.lower()]
+            if col_fecha:
+                df_salud_clean[col_fecha[0]] = pd.to_datetime(df_salud_clean[col_fecha[0]], errors="coerce")
+                df_salud_clean = df_salud_clean.dropna(subset=[col_fecha[0]]).sort_values(col_fecha[0])
 
-        # 4. Obtener columnas numéricas que realmente tengan datos válidos
-        cols_num = [
-            c for c in df_salud_clean.select_dtypes(include=["number"]).columns 
-            if df_salud_clean[c].dropna().count() > 0
-        ]
-        
-        cols_cat = [c for c in df_salud_clean.columns if c not in cols_num]
+            for col in df_salud_clean.columns:
+                if not col_fecha or col != col_fecha[0]:
+                    s_num = (
+                        df_salud_clean[col]
+                        .astype(str)
+                        .str.replace(',', '.')
+                        .str.strip()
+                    )
+                    df_salud_clean[col] = pd.to_numeric(s_num, errors='coerce')
 
-        if cols_cat and cols_num:
-            col_x = st.selectbox("Seleccionar Eje X (Fecha / Categoría):", options=cols_cat, key="sb_cat_salud")
-            col_y = st.selectbox("Seleccionar Eje Y (Variación / Índice):", options=cols_num, key="sb_num_salud")
+            cols_num = [c for c in df_salud_clean.select_dtypes(include=["number"]).columns if df_salud_clean[c].dropna().count() > 0]
+            cols_cat = [c for c in df_salud_clean.columns if c not in cols_num]
 
-            # Filtrar el DataFrame para eliminar filas donde la columna Y seleccionada sea None/NaN
-            df_grafico = df_salud_clean.dropna(subset=[col_y])
+            if cols_cat and cols_num:
+                col_x = st.selectbox("Seleccionar Eje X (Fecha / Categoría):", options=cols_cat, key="sb_cat_salud")
+                col_y = st.selectbox("Seleccionar Eje Y (Variación / Índice):", options=cols_num, key="sb_num_salud")
 
-            if not df_grafico.empty:
-                fig_line_salud = px.line(
-                    df_grafico,
-                    x=col_x,
-                    y=col_y,
-                    title=f"Evolución Lineal de {col_y} según {col_x}",
-                    markers=True,
-                    color_discrete_sequence=["#00a8e8"],
-                )
-                fig_line_salud.update_layout(
-                    xaxis_title=col_x,
-                    yaxis_title=col_y,
-                    xaxis=dict(tickangle=-45),
-                    hovermode="x unified",
-                    height=550,
-                )
-                st.plotly_chart(fig_line_salud, use_container_width=True)
+                df_grafico = df_salud_clean.dropna(subset=[col_y])
+
+                if not df_grafico.empty:
+                    fig_line_salud = px.line(
+                        df_grafico,
+                        x=col_x,
+                        y=col_y,
+                        title=f"Evolución Lineal de {col_y} según {col_x}",
+                        markers=True,
+                        color_discrete_sequence=["#00a8e8"],
+                    )
+                    fig_line_salud.update_layout(
+                        xaxis_title=col_x,
+                        yaxis_title=col_y,
+                        xaxis=dict(tickangle=-45),
+                        hovermode="x unified",
+                        height=550,
+                    )
+                    st.plotly_chart(fig_line_salud, use_container_width=True)
+                else:
+                    st.warning(f"⚠️ La columna '{col_y}' no contiene datos numéricos válidos.")
             else:
-                st.warning(f"⚠️ La columna '{col_y}' solo contiene valores nulos o vacíos.")
+                st.warning("⚠️ No se detectaron columnas numéricas válidas para graficar.")
+
+            st.subheader("Vista previa de la tabla de datos")
+            st.dataframe(df_salud_clean, use_container_width=True)
+            st.caption(f"Total de registros válidos cargados: {len(df_salud_clean)} filas.")
         else:
-            st.warning("⚠️ No se detectaron columnas numéricas válidas con datos para graficar.")
+            st.error("❌ No se encontró el archivo ipc_salud.csv en la raíz del proyecto.")
 
-# Código dentro de la Tab 5 (con sangría de 8 espacios)
-        st.subheader("Vista previa de la tabla de datos")
-        st.dataframe(df_salud_clean, use_container_width=True)
-        st.caption(f"Total de registros válidos cargados: {len(df_salud_clean)} filas.")
-
-# except pegado completamente a la izquierda (SIN espacios)
 except Exception as e:
-    st.error(f"Error al ejecutar el dashboard: {e}")
+    st.error(f"Error general en la aplicación: {e}")

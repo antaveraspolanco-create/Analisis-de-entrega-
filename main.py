@@ -283,10 +283,10 @@ try:
         )
 
     # -------------------------------------------------------------
-    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD
+    # TAB 5: EVOLUCIÓN LINEAL Y COMPARATIVA IPC SALUD
     # -------------------------------------------------------------
     with tab5:
-        st.header("📊 Evolución Lineal - IPC República Dominicana Salud")
+        st.header("📊 Evolución e Indicadores - IPC República Dominicana Salud")
 
         archivo_salud = BASE_DIR / "ipc_salud.csv"
 
@@ -322,28 +322,62 @@ try:
             cols_cat = [c for c in df_salud_clean.columns if c not in cols_num]
 
             if cols_cat and cols_num:
+                tipo_visual = st.radio(
+                    "Estilo de visualización gráfica:",
+                    options=["Línea Suave con Área Sombreada", "Combinado (Barras + Línea)"],
+                    horizontal=True
+                )
+
                 col_x = st.selectbox("Seleccionar Eje X (Fecha / Categoría):", options=cols_cat, key="sb_cat_salud")
-                col_y = st.selectbox("Seleccionar Eje Y (Variación / Índice):", options=cols_num, key="sb_num_salud")
+                col_y = st.selectbox("Seleccionar Eje Y (Métrica a Graficar):", options=cols_num, key="sb_num_salud")
 
                 df_grafico = df_salud_clean.dropna(subset=[col_y])
 
                 if not df_grafico.empty:
-                    fig_line_salud = px.line(
-                        df_grafico,
-                        x=col_x,
-                        y=col_y,
-                        title=f"Evolución Lineal de {col_y} según {col_x}",
-                        markers=True,
-                        color_discrete_sequence=["#00a8e8"],
-                    )
-                    fig_line_salud.update_layout(
+                    if tipo_visual == "Línea Suave con Área Sombreada":
+                        fig_salud = px.line(
+                            df_grafico,
+                            x=col_x,
+                            y=col_y,
+                            title=f"📈 Evolución Tendencial de {col_y}",
+                            markers=True,
+                            template="plotly_white"
+                        )
+                        fig_salud.update_traces(
+                            line_color="#00a8e8",
+                            line_width=3,
+                            marker=dict(size=6, color="#003459"),
+                            fill='tonexty'
+                        )
+                    else:
+                        fig_salud = go.Figure()
+                        fig_salud.add_trace(
+                            go.Bar(
+                                x=df_grafico[col_x],
+                                y=df_grafico[col_y],
+                                name=f"Magnitud {col_y}",
+                                marker_color="#2b5c8f"
+                            )
+                        )
+                        fig_salud.add_trace(
+                            go.Scatter(
+                                x=df_grafico[col_x],
+                                y=df_grafico[col_y],
+                                name="Tendencia",
+                                mode="lines+markers",
+                                line=dict(color="#ff9f1c", width=3)
+                            )
+                        )
+                        fig_salud.update_layout(title=f"📊 Comparativo en Barras y Línea: {col_y}")
+
+                    fig_salud.update_layout(
                         xaxis_title=col_x,
                         yaxis_title=col_y,
                         xaxis=dict(tickangle=-45),
                         hovermode="x unified",
-                        height=550,
+                        height=550
                     )
-                    st.plotly_chart(fig_line_salud, use_container_width=True)
+                    st.plotly_chart(fig_salud, use_container_width=True)
                 else:
                     st.warning(f"⚠️ La columna '{col_y}' no contiene datos numéricos válidos.")
             else:

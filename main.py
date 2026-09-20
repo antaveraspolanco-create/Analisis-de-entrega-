@@ -261,25 +261,54 @@ try:
             f"**Per Cápita Reajustado Recomendado:** RD$ {capita_nueva:,.2f} / afiliado / mes"
         )
 
-    # -------------------------------------------------------------
-    # TAB 4: Tabla IPC Completa
+  # -------------------------------------------------------------
+    # TAB 4: Tabla IPC Completa y Exportación de Datos (.parquet / .xlsx)
     # -------------------------------------------------------------
     with tab4:
-        st.subheader("Serie Temporal Histórica de Precios")
+        st.subheader("📋 Serie Temporal Histórica de Precios y Exportación de Datos")
 
         st.dataframe(df_serie, use_container_width=True)
 
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            df_serie.to_excel(
-                writer, index=False, sheet_name="IPC_Serie_Historica"
+        st.markdown("### 📥 Descarga de Datasets (Formatos para Entrega)")
+        col_dl1, col_dl2 = st.columns(2)
+
+        # 1. Exportar Serie Histórica General a Parquet
+        with col_dl1:
+            buffer_parquet_serie = io.BytesIO()
+            df_serie.to_parquet(buffer_parquet_serie, index=False, engine="pyarrow")
+            st.download_button(
+                label="📦 Descargar Serie Historica (.parquet)",
+                data=buffer_parquet_serie.getvalue(),
+                file_name="IPC_Serie_Historica_BCRD.parquet",
+                mime="application/octet-stream",
+                key="btn_parquet_serie"
             )
 
+        # 2. Exportar Dataset de Jerarquía Salud a Parquet
+        with col_dl2:
+            buffer_parquet_jerarquia = io.BytesIO()
+            df_jerarquia.to_parquet(buffer_parquet_jerarquia, index=False, engine="pyarrow")
+            st.download_button(
+                label="📦 Descargar Jerarquía COICOP Salud (.parquet)",
+                data=buffer_parquet_jerarquia.getvalue(),
+                file_name="DataSet_Analisis_Salud.parquet",
+                mime="application/octet-stream",
+                key="btn_parquet_jerarquia"
+            )
+
+        st.divider()
+
+        # Descarga opcional en Excel
+        buffer_excel = io.BytesIO()
+        with pd.ExcelWriter(buffer_excel, engine="openpyxl") as writer:
+            df_serie.to_excel(writer, index=False, sheet_name="IPC_Serie_Historica")
+
         st.download_button(
-            label="📥 Descargar Serie Completa en Excel (.xlsx)",
-            data=buffer.getvalue(),
+            label="📊 Descargar Serie Completa en Excel (.xlsx)",
+            data=buffer_excel.getvalue(),
             file_name="serie_historica_ipc.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="btn_excel_serie"
         )
 
     # -------------------------------------------------------------

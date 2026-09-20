@@ -285,66 +285,84 @@ try:
         )
 
 # -------------------------------------------------------------
-    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD (CORREGIDO DE RAÍZ)
+    # TAB 5: EVOLUCIÓN LINEAL IPC SALUD (SOLUCIÓN DE RAÍZ)
     # -------------------------------------------------------------
     with tab5:
         st.header("📊 Evolución Lineal - IPC República Dominicana Salud")
 
         df_salud_clean = df_salud.copy()
 
-        # 1. Limpieza básica de nombres de columnas
-        df_salud_clean.columns = [str(col).strip().replace('"', '') for col in df_salud_clean.columns]
+        # 1. Normalizar nombres de columnas (eliminar acentos/caracteres corruptos)
+        df_salud_clean.columns = (
+            df_salud_clean.columns.astype(str)
+            .str.encode('ascii', 'ignore')
+            .str.decode('utf-8')
+            .str.strip()
+        )
 
-        # 2. Convertir columnas numéricas de forma segura
-        for col in df_salud_clean.columns:
-            if not any(keyword in col.lower() for keyword in ["fecha", "categoria", "rubro", "articulo"]):
-                # Reemplazar comas por puntos y convertir a número
-                s_num = df_salud_clean[col].astype(str).str.replace(',', '.').str.strip()
-                df_salud_clean[col] = pd.to_numeric(s_num, errors='coerce')
-
-        # 3. Detectar columna de fecha si existe
-        col_fecha = [c for c in df_salud_clean.columns if "fecha" in c.lower()]
+        # 2. Identificar la columna de Fecha y convertirla correctamente
+        col_fecha = [c for c in df_salud_clean.columns if "fecha" in c.lower() or "fechas" in c.lower()]
+        
         if col_fecha:
-            df_salud_clean[col_fecha[0]] = pd.to_datetime(
-                df_salud_clean[col_fecha[0]].astype(str).str.split().str[0], 
-                errors='coerce'
-            )
+            df_salud_clean[col_fecha[0]] = pd.to_datetime(df_salud_clean[col_fecha[0]], errors="coerce")
+            # Filtrar fechas vacías y ordenar cronológicamente
             df_salud_clean = df_salud_clean.dropna(subset=[col_fecha[0]]).sort_values(col_fecha[0])
 
-        cols_num = df_salud_clean.select_dtypes(include=["number"]).columns.tolist()
-        cols_cat = df_salud_clean.columns.difference(cols_num).tolist()
+        # 3. Limpiar y convertir todas las columnas numéricas
+        for col in df_salud_clean.columns:
+            if col not in col_fecha:
+                s_limpia = (
+                    df_salud_clean[col]
+                    .astype(str)
+                    .str.replace(',', '.')
+                    .str.replace('None', '')
+                    .str.replace('nan', '')
+                    .str.strip()
+                )
+                df_salud_clean[col] = pd.to_numeric(s_limpia, errors='coerce')
+
+        # 4. Obtener columnas numéricas que realmente tengan datos válidos
+        cols_num = [
+            c for c in df_salud_clean.select_dtypes(include=["number"]).columns 
+            if df_salud_clean[c].dropna().count() > 0
+        ]
+        
+        cols_cat = [c for c in df_salud_clean.columns if c not in cols_num]
 
         if cols_cat and cols_num:
             col_x = st.selectbox("Seleccionar Eje X (Fecha / Categoría):", options=cols_cat, key="sb_cat_salud")
             col_y = st.selectbox("Seleccionar Eje Y (Variación / Índice):", options=cols_num, key="sb_num_salud")
 
-            fig_line_salud = px.line(
-                df_salud_clean,
-                x=col_x,
-                y=col_y,
-                title=f"Evolución Lineal de {col_y} según {col_x}",
-                markers=True,
-                color_discrete_sequence=["#00a8e8"],
-            )
-            fig_line_salud.update_layout(
-                xaxis_title=col_x,
-                yaxis_title=col_y,
-                xaxis=dict(tickangle=-45),
-                hovermode="x unified",
-                height=550,
-            )
-            st.plotly_chart(fig_line_salud, use_container_width=True)
+            # Filtrar el DataFrame para eliminar filas donde la columna Y seleccionada sea None/NaN
+            df_grafico = df_salud_clean.dropna(subset=[col_y])
+
+            if not df_grafico.empty:
+                fig_line_salud = px.line(
+                    df_grafico,
+                    x=col_x,
+                    y=col_y,
+                    title=f"Evolución Lineal de {col_y} según {col_x}",
+                    markers=True,
+                    color_discrete_sequence=["#00a8e8"],
+                )
+                fig_line_salud.update_layout(
+                    xaxis_title=col_x,
+                    yaxis_title=col_y,
+                    xaxis=dict(tickangle=-45),
+                    hovermode="x unified",
+                    height=550,
+                )
+                st.plotly_chart(fig_line_salud, use_container_width=True)
+            else:
+                st.warning(f"⚠️ La columna '{col_y}' solo contiene valores nulos o vacíos.")
         else:
-            st.warning("⚠️ No se detectaron columnas numéricas válidas para graficar en este archivo.")
+            st.warning("⚠️ No se detectaron columnas numéricas válidas con datos para graficar.")
 
+# Código dentro de la Tab 5 (con sangría de 8 espacios)
         st.subheader("Vista previa de la tabla de datos")
         st.dataframe(df_salud_clean, use_container_width=True)
-        st.caption(f"Total de registros cargados: {len(df_salud_clean)} filas.")
-        # Cierre de la Tab 5 (debe llevar sangría/espacios dentro del try)
-        st.subheader("Vista previa de la tabla de datos")
-        st.dataframe(df_salud_clean, use_container_width=True)
-        st.caption(f"Total de registros cargados: {len(df_salud_clean)} filas.")
+        st.caption(f"Total de registros válidos cargados: {len(df_salud_clean)} filas.")
 
-# El bloque except debe ir al nivel principal (sin sangría al inicio de la línea)
+# except pegado completamente a la izquierda (SIN espacios)
 except Exception as e:
     st.error(f"Error al ejecutar el dashboard: {e}")
